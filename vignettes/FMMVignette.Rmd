@@ -1,0 +1,355 @@
+---
+title: "FMM Vignette"
+
+author: "Itziar Fernández, Alejandro Rodríguez-Collado, Yolanda Larriba, Adrián Lamela, Christian Canedo, Cristina Rueda"
+
+date: "`r Sys.Date()`"
+
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    fig_caption: yes
+    
+bibliography: ReferencesFMM.bib 
+
+link-citations: true
+
+vignette: >
+  %\VignetteIndexEntry{FMM Vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  %\VignettePackage{FMM}
+  % \VignetteDepends{gridExtra} 
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+# Introduction
+FMM is an approach for describing a great variety of rhythmic patterns in oscillatory signals through a single or a
+sum of waves. The main goal of this package is to implement all required functions to fit and explore FMM models.  Specifically, the `FMM` package allows:
+
+1. Fit single and multi-wave FMM models, as well as a restricted version for including a priori knowledge about the wave shapes.
+2. Generate synthetic data from FMM models.
+3. Visualize graphically the results of the fitting process.
+
+Examples of real-word biological oscillations are also included to illustrate the potential of this new methodology. 
+
+Please visit the [FMM Project website](http://www.eio.uva.es/fmm-project/) for complete and up-to-date information on the progress made on the FMM approach.
+
+
+# Getting starting
+`FMM` is an R package available from the Comprehensive R Archive Network (CRAN) at [https://CRAN.R-project.org/package=FMM](https://CRAN.R-project.org/package=FMM). To install the package directly from CRAN, start R and enter:
+
+```{r eval=FALSE}
+install.packages("FMM")
+```
+
+The R source code is also provided via the GitHub repository at [https://github.com/alexARC26/FMM](https://github.com/alexARC26/FMM). To install this development version enter:
+```{r eval=FALSE}
+install.packages("devtools")
+devtools::install_github("alexARC26/FMM")
+```
+
+Once `FMM` is installed, it can be loaded by the following command:
+```{r}
+library("FMM")
+```
+
+
+# Background
+
+## The FMM model
+The `FMM` package implements the homonymous methodology: a novel approach to describe rhythmic patterns in oscillatory signals as an additive nonlinear parametric regression model. The FMM model is capable of fitting a great extent of heterogeneous shapes including non-sinusoidal ones. Bellow the FMM models are briefly described.
+
+### The FMM wave
+In general, at the time point $t$, a frequency modulated Möbius (FMM) wave is defined as
+$$
+W(t; A, \alpha, \beta, \omega)= A \cos\left(\phi\left(t; \alpha, \beta, \omega\right)\right)
+$$
+where $A \in \Re^{+}$ represents the wave amplitude and, 
+$$
+  \phi\left(t; \alpha, \beta, \omega\right)= \beta + 2\arctan\left(\omega \tan\left(\frac{t - \alpha}{2}\right)\right)
+$$
+the wave phase. $\alpha \in [0,2\pi]$ is a translation parameter, whereas $\beta \in [0,2\pi]$ and $\omega \in [0,1]$ describe the wave shape.
+
+Two important features of a wave are the peak and trough, defined as the highest and lowest points above and below the rest position, respectively. In many applications, the peak and trough times could be very useful tools to extract practical information of a wave, since they capture important aspects of the dynamics. These two interesting parameters can be directly derived from the main parameters of an FMM wave as
+
+$$
+  t^U =  \alpha + 2\arctan\left(\frac{1}{\omega}\tan\left(-\frac{\beta}{2}\right)\right) \\
+  t^L =  \alpha + 2\arctan\left(\frac{1}{\omega}\tan\left(\frac{\pi-\beta}{2}\right)\right) 
+$$
+where $t^U$ and $t^L$ denote the peak and trough times, respectively.
+
+### Monocomponent FMM model
+Let $X\left(t_i\right)$, $t_1 < t_2 < \dots < t_n$ be the vector of observations.
+A monocomponent FMM model is defined as
+
+$$
+  X\left(t_i\right) = M + W\left(t_i; A, \alpha, \beta, \omega\right) + e\left(t_i\right), \quad i = 1,\dots,n 
+$$
+where $M \in \Re$ is an intercept parameter describing the baseline level of the signal, $W(t_i; A, \alpha, \beta, \omega)$ is an FMM wave, and it is assumed that the errors $e\left(t_i\right)$ are independent and normally distributed with zero mean and a common variance $\sigma^2$.
+
+### Multicomponent FMM model
+Let $X\left(t_i\right)$, $t_1 < t_2 < \dots < t_n$ be the vector of observations. 
+A multicomponent FMM model of order $m$, denoted by FMM$_m$, is defined as
+$$
+ X(t_i) = M + \sum_{J=1}^{m}W_J(t_i) + e(t_i) , \quad i = 1,\dots,n
+$$
+where $M \in \Re$ is an intercept parameter describing the baseline level of the signal, and 
+$$
+W_J(t_i)= W(t_i; A_J, \alpha_J, \beta_J, \omega_J)
+$$
+is the Jth FMM wave. 
+
+
+## Real-world example data sets
+The FMM approach can be useful to analyze oscillatory signals from different disciplines. In particular, it has already been used successfully for the analysis of several biological oscillatory signals such as the circadian rhythms, the electrocardiogram (ECG) signal, the neuronal action potential (AP) curves and the blood pressure signal. 
+
+The `FMM` package includes four real-world example datasets, in `RData` format, which illustrate the use of this package on the analysis of real signals from these areas. Bellow is a brief description of each of them. 
+
+- **`mouseGeneExp`**. The `mouseGeneExp` data set contains expression data of the *Iqgap2* gene from mouse liver. Gene expression values are collected along two periods of $24$ hours. Samples are pooled and analyzed using Affymetrix arrays. The complete database is freely available at [NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/), with GEO accession number GSE11923.
+
+- **`ecgData`**. The `ecgData` data set contains the voltage of the heart’s electric activity, measured in mV, from the patient *sel100* of QT database (@Lag1997). The data illustrate the typical ECG signal heartbeat from a healthy subject. Specifically, the ECG signal contained in this dataset corresponds to lead II in the fifth of the thirty annotated heartbeats. Recordings are publicly available on [Physionet website](https://www.physionet.org/).
+
+- **`neuronalSpike`**. The `neuronalSpike` data set contains the voltage data (in mV) of a neuronal AP curve, the oscillatory signal that measures the electrical potential difference between inside and outside the cell due to an external stimulus and serves as basic information unit between neurons. The data have been simulated with the Hodgkin-Huxley model (@Hod1952) using a modified version of the python package `NeuroDynex` available at @Gers2014. 
+
+- **`neuronalAPTrain`**. The `neuronalAPTrain` data set contains data of a spike train composed of three similar shaped AP curves. The neuronal APs have been simulated with the Hodgkin-Huxley model (@Hod1952).
+
+## Background references
+For a detailed background on methodology, computational algorithms and diverse applications, see the following references.
+
+| Reference                         | Description                                                                 |
+|:----------------------------------|:----------------------------------------------------------------------------|
+| @Rue2019                          | The single-component FMM model.                                             |
+| @Rue21a                           | The multi-component FMM model.                                              |
+| @Rue21b                           | The FMM approach for describing ECG signals.                                |
+| @Rue21c                           | A detailed review of FMM approach to analyze biomedical signals.            |
+| @Rod21a                           | Hodgkin-Huxley model representation using a particular restricted FMM model.|
+| @Rod21b                           | The potential of FMM features to classify neurons.                          |
+| @Lar21                            | The potential of FMM to solve problems in chronobiology.                    |
+| @Fer21                            | The R package that allows implementing the model.                           |
+                               
+
+# FMM usage
+The remainder of this vignette will focus on usage of `FMM` functions. For each of the sections below, refer to the `FMM` R package manual for specific technical details on usage, arguments and methods or use ? to access individual manual pages.
+
+## FMM object
+`FMM` is the main class in the `FMM` package. An object of class `FMM` contains the slots summarized in the following table. 
+
+| Slot            | Description                                                                                     |
+|:----------------|:------------------------------------------------------------------------------------------------|
+| timePoints      | Time points for each data point over one single observed period.                                |
+| data            | Data to be fitted to an FMM model. Data could be collected over multiple periods.               |
+| summarizedData  | The summarized data at each time point across all considered periods.                           |
+| nPeriods        | The number of periods in data.                                                                  |
+| fittedValues    | The fitted values by the FMM model.                                                             |
+| M               | Value of the estimated intercept parameter M.                                                   |
+| A               | Vector of the estimated FMM wave amplitude parameter(s) $A$.                                    |
+| alpha           | Vector of the estimated FMM wave phase translation parameter(s) $\alpha$.                       |
+| beta            | Vector of the estimated FMM wave skewness parameter(s) $\beta$.                                 |
+| omega           | Vector of the estimated FMM wave kurtosis parameter(s) $\omega$.                                |
+| SSE             | Value of the residual sum of squares values.                                                    |
+| R2              | Vector specifying the explained variance by each of the fitted FMM components.                  |
+| nIter           | Number of iterations of the backfitting algorithm.                                              |
+
+The standard methods implemented for displaying relevant information of an object of the class `FMM` include the functions:
+
+- `coef()` to display the estimates of each FMM wave parameters.
+
+- `fitted()` to display the fitted values.
+
+- `resid()` to display the residuals of the model.
+
+- `summary()` to display the FMM wave parameter estimates, as well as the peak and trough times, together with the signal values at those times, a brief description of the residuals, and the proportion of variance explained by each FMM component and by the global model. The `summary()` output can be assigned to an object to get a list of all the displayed results.  
+- getters for each of the FMM object slots such as `getA()`, `getAlpha()`, etc.
+
+
+## Simulating FMM data
+The function `generateFMM()` can be used to simulate data from an FMM model. The main arguments of this function are the FMM model parameters: `M`, `A`, `alpha`, `beta` and `omega`. For generating data from a monocomponent FMM model enter:
+
+```{r}
+generateFMM(M=2,A=3,alpha=1.5,beta=2.3,omega=0.1,
+            plot=TRUE,outvalues=FALSE)
+```
+
+For an FMM model with $m$ components, all these arguments are numeric vectors of length $m$, except `M`, which has length $1$. For example, you can generate data from an FMM$_2$ model with the code:
+
+```{r}
+fmm2.data <-generateFMM(M=0,A=c(2,2),alpha=c(1.5,3.4),beta=c(0.2,2.3),omega=c(0.1,0.2),
+                         plot=FALSE, outvalues=TRUE)
+str(fmm2.data)
+```
+
+A scatter plot of simulated data against time points can be drawn by setting `plot = TRUE`. When `outvalues = TRUE`, a list with input parameters, time points and simulated data are returned. 
+
+By default, the data will be simulated at a sequence of $100$ equally spaced time points from $0$ to $2\pi$. The time point sequence can be modified by `from`, `to` and `length.out` arguments. It can be also manually set using the argument `timePoints`, in which case `from`, `to` and `length.out` will be ignored.
+
+A Gaussian noise can be added by `sigmaNoise` argument, whose value sets the corresponding standard deviation of the normally distributed noise. Here, a Gaussian noise with $\sigma=0.3$ is added to the `fmm2.data` data simulated above:
+
+```{r}
+set.seed(15)
+fmm2.data <-generateFMM(M=0,A=c(2,2),alpha=c(1.5,3.4),beta=c(0.2,2.3),omega=c(0.1,0.2),
+                        plot=TRUE, outvalues=TRUE,
+                        sigmaNoise=0.3)
+```
+
+## Fitting FMM models
+An FMM model can be fitted using the function `fitFMM()`. As result an object of the `FMM` class is obtained. 
+
+### Basic fitting
+The `fitFMM()` function requires the `vData` argument with the data to be fitted. In addition, to control a basic fitting, two other arguments can be used: `timePoints` for the specific time points of a single period, and `nback` with the number of FMM components to be fitted. For the `fmm2.data` simulated above, a bicomponent FMM model can be fitted by the code:
+
+```{r}
+fit.fmm2 <- fitFMM(vData = fmm2.data$y, timePoints = fmm2.data$t, nback = 2)
+summary(fit.fmm2)
+```
+
+The `summary()` method allows the return of `fitFMM()` to be presented in tabular form, where each row corresponds to a component and each column to an FMM wave parameter. From the above summary results, we can see that the variance explained by the fitted model is $95.58\%$ and that the FMM waves are labelled in decreasing order according to the $R^2$ value: the explained variance is $75.15\%$ and $20.43\%$ by FMM “Wave 1” and “Wave 2”, respectively. 
+
+The location of the peak and trough of each FMM wave, as well as the value of the signal at these time points, can be also estimated by the `getFMMPeaks()` function. When `timePointsIn2pi=TRUE` the peak and trough locations
+to be returned into the interval from $0$ to $2\pi$.
+
+```{r}
+getFMMPeaks(fit.fmm2, timePointsIn2pi = TRUE)
+```
+
+#### FMM wave estimation
+To solve the estimation problem of a FMM wave a two-way grid search over the choice of the $(\alpha, \omega)$ parameters is performed. Then, for each pair of $(\alpha, \omega)$ fixed values, the estimates for $M$, $A$ and $\beta$ are obtained by solving a least square problem. 
+
+The `lengthAlphaGrid` and `lengthOmegaGrid` arguments are used to set the grid resolution by specifying the number of equally spaced $\alpha$ and $\omega$ values. When both arguments are large, the computational demand can be high. The algorithm will be computationally more efficient by reducing the size of the sequences of the $\alpha$ and $\omega$ parameters and repeating the fitting process a `numReps` of times, in such a way that, at each repetition, a new two-dimensional grid of $(\alpha, \omega)$ points is created around the previous estimates. 
+
+The example code below shows two different configurations of the arguments `lengthAlphaGrid`, `lengthOmegaGrid` and `numReps` to estimated the previously simulated `fmm2.data`. 
+```{r}
+fit1 <- fitFMM(vData = fmm2.data$y, timePoints = fmm2.data$t, nback = 2, 
+               lengthAlphaGrid = 48, lengthOmegaGrid = 24, numReps = 3,
+               showTime = TRUE)
+fit2 <- fitFMM(vData = fmm2.data$y, timePoints = fmm2.data$t, nback = 2, 
+               lengthAlphaGrid = 14, lengthOmegaGrid = 7, numReps = 6,
+               showTime = TRUE)
+getR2(fit1)
+getR2(fit2)
+
+```
+By combining the value of these arguments of `fitFMM()` a balance between computational cost and the accuracy of estimates has been achieved. The execution time has been reduced considerably by setting shorter sequences for both `lengthAlphaGrid` and `lengthOmegaGrid` arguments, and increasing the number of repetitions from $3$ to $6$. Note that both configurations achieve the same accuracy.
+
+#### FMM$_m$ model estimation
+A backfitting algorithm is used for the estimation of the multicomponent models. 
+
+The argument `maxiter` sets the maximum number of backfitting iterations. By default, `maxiter` iterations will be forced, but we can use the argument `stopFunction` to modify the stopping criteria. 
+
+Two criteria have been implemented as stop functions in this package. When `stopFunction = alwaysFalse`, `maxiter` iterations will be forced. If `stopFunction = R2()`, the algorithm will be stopped when the difference between the explained variability in two consecutive iterations is less than a value pre-specified in the `difMax` argument of `R2()` function. In the example above, we can use the argument `stopFunction = R2(difMax = 0.01)` to continue the search until there is an improvement, in terms of explained variability, of less than $1\%$. 
+```{r}
+fit3 <- fitFMM(vData = fmm2.data$y, timePoints = fmm2.data$t, nback = 2, 
+               maxiter = 5, stopFunction = R2(difMax = 0.01),
+               showTime = TRUE, showProgress = TRUE)
+```
+
+### A restricted FMM$_m$ model
+In some applications, it is not uncommon signals with repetitive shape-similar waves. The `fitFMM()` function allows fitting a restricted version of multicomponent FMM models that incorporate equality constraints on the $\beta$ and $\omega$ parameters in order to obtain more efficient estimators. In particular, $d$ blocks of
+restrictions can be added:
+
+$$
+ \begin{array}{cc} 
+  \beta_1 = \dots = \beta_{m_1}           & \omega_1 = \dots = \omega_{m_1} \\
+  \beta_{m_1+1} = \dots = \beta_{m_2}     & \omega_{m_1+1} = \dots = \omega_{m_2}  \\
+  \dots                                   & \dots  \\
+  \beta_{m_{d-1}+1} = \dots = \beta_{m_d} & \omega_{m_{d-1}+1} = \dots = \omega_{m_d}
+\end{array}
+$$
+
+The argument `betaOmegaRestrictions` sets the equality constraints for the $\beta$ and $\omega$ parameters. To add restrictions, integer vectors of length $m$ can be passed to this argument, so that positions with the same numeric value correspond to FMM waves whose parameters, $\beta$ and $\omega$, are forced to be equal. 
+
+For example, the following code generates a set of $100$ observations from an FMM model of order $m=4$ with
+
+- intercept parameter $M = 3$, 
+
+- amplitude parameters: $A_1 = 4$, $A_2 = 3$, $A_3 = 1.5$ and $A_4 = 1$, 
+
+- phase translation parameters: $\alpha_1 = 3.8$, $\alpha_2 = 1.2$, $\alpha_3 = 4.5$ and $\alpha_4 = 2$, and 
+
+- with regard to the shape parameters, pairs of waves are equal, satisfying:
+$$
+ \begin{array}{cc} 
+  \beta_1 = \beta_2 = 3           & \omega_1 = \omega_2 = 0.1 \\
+  \beta_3 = \beta_4 = 1           & \omega_3 = \omega_4 = 0.05
+\end{array}
+$$
+```{r}
+set.seed(1115)
+rfmm.data <-generateFMM(M = 3, A = c(4,3,1.5,1), 
+                        alpha = c(3.8,1.2,4.5,2),
+                        beta = c(rep(3,2),rep(1,2)),
+                        omega = c(rep(0.1,2),rep(0.05,2)),
+                        plot = TRUE, outvalues = TRUE,
+                        sigmaNoise = 0.3)
+```
+
+To impose the shape restriction on the fitting process, we use the argument `betaOmegaRestrictions = c(1,1,2,2)`.
+
+```{r}
+fit.rfmm <- fitFMM(vData = rfmm.data$y, timePoints = rfmm.data$t, nback = 4,
+                   betaOmegaRestrictions = c(1, 1, 2, 2),
+                   lengthAlphaGrid = 24, lengthOmegaGrid = 15, numReps = 5)
+summary(fit.rfmm)
+```
+
+
+### Additional arguments of `fitFMM()` function
+- **`nPeriods`**. For some applications, data are collected over multiple periods. This information is received by the `fitFMM()` function through the input argument `nPeriods`. When `nPeriods>1`, the FMM fitting is carried out by averaging the data collected at each time point across all considered periods.
+
+- **`parallelize`**. When `parallelize = TRUE` a parallel processing implementation is used for better performance.
+
+- **`restrExactSolution`**. When the argument `restrExactSolution = FALSE` the $\omega$ parameters of the restricted version will be estimated by a two-nested backfitting algorithm. Otherwise, the optimal solution for the restricted fitting, computationally more intensive, will be obtain. 
+
+- **`showProgress`**. When `showProgress = TRUE` a progress indicator and information about the stopping criterion of the backfitting algorithm is displayed on the console.
+
+- **`showTime`**. When `showTime = TRUE` the execution time is displayed on the console.
+
+
+## Plotting FMM models
+The `FMM` package includes the function `plotFMM()` to visualize an object of class `FMM`. An `FMM` object can be plotted in two ways:
+
+- The default plot that represents as points the original data and as a line the fitted signal. 
+
+- A component plot that separately represents each centered FMM wave. This plot is displayed when the boolean argument `components = TRUE`. In this type of representation, when `legendInComponentsPlot = TRUE`, a legend appears to identify the represented waves. 
+
+The following code can be used to display graphically the `fit.fmm2` object created in the previous section:
+```{r, message=FALSE, fig.height=5, fig.width=10}
+titleText <- "Two FMM waves"
+par(mfrow=c(1,2))
+# default plot
+plotFMM(fit.fmm2, textExtra = titleText)
+# component plot
+plotFMM(fit.fmm2, components = TRUE, textExtra = titleText, legendInComponentsPlot = TRUE)
+```
+The argument `textExtra` has been used to add an extra text to the title of both graphical representations.
+
+When the argument `use_ggplot2 = TRUE`, a more aesthetic and customizable plot is created using the `ggplot2` package instead of base R graphics. For example, for creating ggplots for the object `fit.rfmm` which contains the restricted FMM model of order $m=4$ previously fitted, we can enter:
+
+```{r, message=FALSE, fig.height=5, fig.width=10}
+library("RColorBrewer")
+library("ggplot2")
+library("gridExtra")
+
+titleText <- "Four restricted FMM waves"
+# default plot
+defaultrFMM2 <- plotFMM(fit.rfmm, use_ggplot2 = TRUE, textExtra = titleText)
+defaultrFMM2 <- defaultrFMM2 + theme(plot.margin=unit(c(1,0.25,1.3,1), "cm")) +
+  ylim(-5, 6)
+# component plot
+comprFMM2 <- plotFMM(fit.rfmm, components=TRUE, use_ggplot2 = TRUE, textExtra = titleText)
+comprFMM2 <- comprFMM2 + theme(plot.margin=unit(c(1,0.25,0,1), "cm")) +
+  ylim(-5, 6) + scale_color_manual(values = brewer.pal("Set1",n = 8)[3:6])
+
+grid.arrange(defaultrFMM2, comprFMM2, nrow = 1)
+
+```
+
+
+# References
