@@ -9,8 +9,11 @@
 #   lengthAlphaGrid, lengthOmegaGrid: precision of the grid of alpha and omega parameters.
 #   alphaGrid, omegaGrid: grids of alpha and omega parameters.
 #   omegaMax: max value for omega.
-#   numReps: number of times the alpha-omega grid search is repeated.
+#   (DEPRECATED) numReps: number of times the alpha-omega grid search is repeated.
 #   showProgress: TRUE to display a progress indicator on the console.
+#   (DEPRECATED) usedApply: paralellized version of apply for grid search
+#   gridList: list that contains precalculations to make grid search
+#             calculations lighter
 # Returns an object of class FMM.
 ###########################################################################################
 fitFMM_back<-function(vData, nback, timePoints = seqTimes(length(vData)),
@@ -19,8 +22,18 @@ fitFMM_back<-function(vData, nback, timePoints = seqTimes(length(vData)),
                       alphaGrid = seq(0, 2*pi, length.out = lengthAlphaGrid),
                       omegaMin = 0.0001, omegaMax = 1,
                       omegaGrid = exp(seq(log(omegaMin), log(omegaMax),
-                                          length.out = lengthOmegaGrid)),
-                      numReps = 3, showProgress = TRUE, usedApply = getApply(FALSE)[[1]]){
+                                          length.out = lengthOmegaGrid+1))[1:lengthOmegaGrid],
+                      numReps = 1, showProgress = TRUE, usedApply = NA,
+                      gridList = precalculateBase(alphaGrid = alphaGrid, omegaGrid = omegaGrid,
+                                                  timePoints = timePoints)){
+
+  if(!is.na(usedApply)){
+    warning("Argument 'usedApply' is deprecated.")
+  }
+
+  if(numReps>1){
+    warning("Argument 'numReps' is deprecated.")
+  }
 
   nObs <- length(vData)
 
@@ -48,15 +61,15 @@ fitFMM_back<-function(vData, nback, timePoints = seqTimes(length(vData)),
 
       # component j fitting using fitFMM_unit function
       fittedFMMPerComponent[[j]] <- fitFMM_unit(backFittingData, timePoints = timePoints, lengthAlphaGrid = lengthAlphaGrid,
-                                            lengthOmegaGrid = lengthOmegaGrid, alphaGrid = alphaGrid, omegaMin = omegaMin,
-                                            omegaMax = omegaMax, omegaGrid = omegaGrid, numReps = numReps, usedApply)
+                                                lengthOmegaGrid = lengthOmegaGrid, alphaGrid = alphaGrid, omegaMin = omegaMin,
+                                                omegaMax = omegaMax, omegaGrid = omegaGrid, gridList = gridList)
       fittedValuesPerComponent[,j] <- getFittedValues(fittedFMMPerComponent[[j]])
       # showProgress
       if(showProgress){
         completedPercentage <- completedPercentage + 100/(nback*maxiter)
         if(ceiling(previousPercentage) < floor(completedPercentage)){
           progressDone <- paste(rep("=",sum((seq(ceiling(previousPercentage), floor(completedPercentage), by = 1)
-                                           %% partialMarkLength == 0))), collapse = "")
+                                             %% partialMarkLength == 0))), collapse = "")
           cat(progressDone)
           previousPercentage <- completedPercentage
         }
@@ -117,8 +130,8 @@ fitFMM_back<-function(vData, nback, timePoints = seqTimes(length(vData)),
   iPV <- sapply(1:nback, function(x){PV(vData, predict(lm(vData ~ cosPhi[,x])))})
   waveOrder<-which.max(iPV)
   while(length(waveOrder)<nback){
-     iPV <- sapply((1:nback)[-waveOrder], function(x){PV(vData, predict(lm(vData ~ cosPhi[,c(waveOrder,x)])))})
-     waveOrder<-c(waveOrder,(1:nback)[-waveOrder][which.max(iPV)])
+    iPV <- sapply((1:nback)[-waveOrder], function(x){PV(vData, predict(lm(vData ~ cosPhi[,c(waveOrder,x)])))})
+    waveOrder<-c(waveOrder,(1:nback)[-waveOrder][which.max(iPV)])
   }
   A <- A[waveOrder]
   alpha <- alpha[waveOrder]

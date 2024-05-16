@@ -47,13 +47,6 @@
 #' library(ggplot2)
 #' # standard plots
 #' plotFMM(fittedFMM2, use_ggplot2 = TRUE)
-#' # modify x-axis with original timePoints
-#' timePoints <- getTimePoints(fittedFMM2)
-#' nObs <- length(timePoints)
-#' sTimePoints <- round(c(1, nObs*0.25, nObs*0.5, nObs*0.75, nObs))
-#' plotFMM(fittedFMM2, use_ggplot2 = TRUE) +
-#'   scale_x_continuous(breaks = sTimePoints,
-#'                      labels = function(x) round(timePoints[x],2))
 #' # and components plots
 #' plotFMM(fittedFMM2, components = TRUE, use_ggplot2 = TRUE)
 #'

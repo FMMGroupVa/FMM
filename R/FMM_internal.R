@@ -2,6 +2,7 @@
 # Auxiliary internal functions
 # Functions:
 #   step1FMM:        M, A and beta initial parameter estimations.
+#   step1FMMOld:     M, A and beta initial parameter estimations. Old version.
 #   bestStep1:       to find the optimal initial parameters estimation.
 #   step2FMM:        second step of FMM fitting process.
 #   refineFMM:       fitFMM from a previous objectFMM.
@@ -19,12 +20,39 @@
 # Internal function: to estimate M, A and beta initial parameters
 # also returns residual sum of squared (RSS).
 # Arguments:
-#    alphaOmegaParameters: vector of the parameters alpha and omega
+#    optBase: list that contains some precalculations delete redundant operations
+#             (1) inv(X'X)X' {X =[1, cos(tStar), sin(tStar)]} (2) alpha, (3) omega,
+#             (4) cos(tStar), (5) sin(tStar)
+#    vData: data to be fitted an FMM model.
+# Returns a 6-length numerical vector: M, A, alpha, beta, omega and RSS
+################################################################################
+
+step1FMM <- function(optBase, vData) {
+
+  pars <- optBase[["base"]] %*% vData
+
+  mobiusRegression <- pars[1] + pars[2]*optBase[["cost"]] + pars[3]*optBase[["sint"]]
+
+  residualSS <- sum((vData - mobiusRegression)^2)/length(optBase[["sint"]])
+
+  aParameter <- sqrt(pars[2]^2 + pars[3]^2)
+  betaParameter <- atan2(-pars[3], pars[2])
+
+  return(c(pars[1], aParameter, optBase[["alpha"]], betaParameter,
+           optBase[["omega"]], residualSS))
+}
+
+################################################################################
+# Internal function: to estimate M, A and beta initial parameters
+# also returns residual sum of squared (RSS).
+# Arguments:
+#    alphaOmegaParameters: vector with the fixed values of alpha and omega
 #    vData: data to be fitted an FMM model.
 #    timePoints: one single period time points.
 # Returns a 6-length numerical vector: M, A, alpha, beta, omega and RSS
 ################################################################################
-step1FMM <- function(alphaOmegaParameters, vData, timePoints) {
+
+step1FMMOld <- function(alphaOmegaParameters, vData, timePoints) {
 
   alphaParameter <- alphaOmegaParameters[1]
   omegaParameter <- alphaOmegaParameters[2]
@@ -55,7 +83,6 @@ step1FMM <- function(alphaOmegaParameters, vData, timePoints) {
   return(c(mParameter, aParameter, alphaParameter, betaParameter,
            omegaParameter, residualSS))
 }
-
 ################################################################################
 # Internal function: to find the optimal initial parameter estimation
 # Arguments:
@@ -100,11 +127,9 @@ bestStep1 <- function(vData, step1){
     } else {
       i <- i+1
     }
-
     if(i > nrow(step1))
       return(NULL)
   }
-
   return(step1[orderedModelParameters[i],])
 }
 
@@ -120,27 +145,42 @@ step2FMM <- function(parameters, vData, timePoints, omegaMax){
 
   nObs <- length(timePoints)
 
+  nonlinearMob = 2*atan(parameters[2]*tan((timePoints-parameters[1])/2))
+  DM <- cbind(rep(1, nObs), cos(nonlinearMob), sin(nonlinearMob))
+  pars <- .lm.fit(DM, vData)$coefficients
+
   # FMM model and residual sum of squares
-  modelFMM <- parameters[1] + parameters[2] *
-    cos(parameters[4]+2*atan2(parameters[5]*sin((timePoints - parameters[3])/2),
-                                cos((timePoints - parameters[3])/2)))
-  residualSS <- sum((modelFMM - vData)^2)/nObs
-  sigma <- sqrt(residualSS*nObs/(nObs - 5))
+  modelFMM <- pars[1] + pars[2]*cos(nonlinearMob) + pars[3]*sin(nonlinearMob)
+  residualSS <- sum((modelFMM - vData)^2)
+
+  sigma <- sqrt(residualSS/(nObs - 5))
+  aParameter <- sqrt(pars[2]^2 + pars[3]^2)
 
   # When amplitude condition is valid, it returns RSS
   # else it returns infinite.
-  amplitudeUpperBound <- parameters[1] + parameters[2]
-  amplitudeLowerBound <- parameters[1] - parameters[2]
+  amplitudeUpperBound <- pars[1] + aParameter
+  amplitudeLowerBound <- pars[1] - aParameter
+
   rest1 <- amplitudeUpperBound <= max(vData) + 1.96*sigma
   rest2 <- amplitudeLowerBound >= min(vData) - 1.96*sigma
 
   # Other integrity conditions that must be met
-  rest3 <- parameters[2] > 0  # A > 0
-  rest4 <- parameters[5] > 0  &  parameters[5] <= omegaMax # omega in (0, omegaMax]
-  if(rest1 & rest2 & rest3 & rest4)
+  #rest3 <- aParameter > 0  # A > 0 # This is always true in profileLike
+
+  #plot(timePoints, vData)
+  #lines(timePoints, modelFMM)
+
+  rest4 <- parameters[2] > 0.0001  &  parameters[2] < omegaMax # omega in (0, omegaMax)
+
+  if(rest1 & rest2 & rest4)
     return(residualSS)
   else
     return(Inf)
+
+  # if(parameters[2] > 0.0001  &  parameters[2] < omegaMax)
+  #   return(residualSS)
+  # else
+  #   return(Inf)
 }
 
 ################################################################################
@@ -200,6 +240,31 @@ calculateCosPhi <- function(alpha, beta, omega, timePoints){
 }
 
 ################################################################################
+# Internal function: to precalculate inv(M'M)M' for M=[1, cos(t*), sin(t*)].
+# Arguments:
+#   alphagrid, omegaGrid: search grid.
+#   timePoints: time points in which the FMM model is computed.
+# Returns a list where each element is a list with elements:
+#   base: inv(M'M)M',
+#   alpha, omega,
+#   cost: cos(tStar), sint: sin(tStar)
+################################################################################
+
+precalculateBase <- function(alphaGrid, omegaGrid, timePoints){
+  # Expanded grid: each row contains a pair (alpha, omega)
+  grid <- expand.grid(alphaGrid, omegaGrid)
+  optBase <- apply(grid, 1, FUN = function(x){
+    x <- as.numeric(x)
+    nonlinearMob = 2*atan(x[2]*tan((timePoints-x[1])/2))
+    M <- cbind(timePoints*0+1, cos(nonlinearMob), sin(nonlinearMob))
+    return(list(base = solve(t(M)%*%M)%*%t(M),
+                alpha = x[1], omega = x[2],
+                cost = cos(nonlinearMob), sint = sin(nonlinearMob)))
+  }, simplify = FALSE)
+  return(optBase)
+}
+
+################################################################################
 # Internal function: returns the parallelized apply function depending on the OS.
 # Returns the apply function to be used.
 ################################################################################
@@ -244,3 +309,5 @@ getApply <- function(parallelize = FALSE){
 
   return(list(usedApply, parallelCluster))
 }
+
+

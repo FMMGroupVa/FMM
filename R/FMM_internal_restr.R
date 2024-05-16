@@ -90,7 +90,7 @@ backfittingRestr <- function(vData, omegas, nback, betaRestrictions,
       backFittingData <- vData - apply(as.matrix(fittedValuesPerComponent[,-j]), 1, sum)
       # component j fitting using fitFMM_unit_restr function
       fittedFMMPerComponent[[j]] <- fitFMM_unit_restr(backFittingData, omegas[j], timePoints = timePoints,
-                                                      lengthAlphaGrid = lengthAlphaGrid, 
+                                                      lengthAlphaGrid = lengthAlphaGrid,
                                                       #alphaGrid = alphaGrid[[j]],
                                                       numReps = numReps)
       fittedValuesPerComponent[,j] <- getFittedValues(fittedFMMPerComponent[[j]])
@@ -183,7 +183,7 @@ fitFMM_unit_restr<-function(vData, omega, timePoints = seqTimes(length(vData)),
   # rest of the parameters.
   # step1FMM function is used to make this estimate
   grid <- expand.grid(alphaGrid, omega)
-  step1 <- usedApply(FUN = step1FMM, X = grid, vData = vData, timePoints = timePoints)
+  step1 <- usedApply(FUN = step1FMMOld, X = grid, vData = vData, timePoints = timePoints)
   colnames(step1) <- c("M","A","alpha","beta","omega","RSS")
 
   # We find the optimal initial parameters,
@@ -240,7 +240,7 @@ fitFMM_unit_restr<-function(vData, omega, timePoints = seqTimes(length(vData)),
 
     ## Step 1: initial parameters
     grid <- as.matrix(expand.grid(alphaGrid,omega))
-    step1 <- usedApply(FUN = step1FMM, X = grid, vData = vData, timePoints = timePoints)
+    step1 <- usedApply(FUN = step1FMMOld, X = grid, vData = vData, timePoints = timePoints)
     colnames(step1) <- c("M","A","alpha","beta","omega","RSS")
     previousBestPar <- bestPar
     bestPar <- bestStep1(vData,step1)
