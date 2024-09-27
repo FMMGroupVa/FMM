@@ -172,15 +172,15 @@ step2FMM <- function(parameters, vData, timePoints, omegaMax){
 
   rest4 <- parameters[2] > 0.0001  &  parameters[2] < omegaMax # omega in (0, omegaMax)
 
-  if(rest1 & rest2 & rest4)
-    return(residualSS)
-  else
-    return(Inf)
-
-  # if(parameters[2] > 0.0001  &  parameters[2] < omegaMax)
+  # if(rest1 & rest2 & rest4)
   #   return(residualSS)
   # else
   #   return(Inf)
+
+  if( parameters[2] > 0 & parameters[2] < omegaMax)
+    return(residualSS)
+  else
+    return(Inf)
 }
 
 ################################################################################
