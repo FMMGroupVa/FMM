@@ -1,31 +1,15 @@
-###########################################################################################
-# Internal function: fit multicomponent FMM model
-# Arguments:
-#   vData: data to be fitted an FMM model.
-#   nback: number of FMM components to be fitted.
-#   timePoints: one single period time points.
-#   maxiter: maximum number of iterations for the backfitting algorithm.
-#   stopFunction: function to check the criterion convergence for the backfitting algorithm.
-#   lengthAlphaGrid, lengthOmegaGrid: precision of the grid of alpha and omega parameters.
-#   alphaGrid, omegaGrid: grids of alpha and omega parameters.
-#   omegaMax: max value for omega.
-#   (DEPRECATED) numReps: number of times the alpha-omega grid search is repeated.
-#   showProgress: TRUE to display a progress indicator on the console.
-#   (DEPRECATED) usedApply: paralellized version of apply for grid search
-#   gridList: list that contains precalculations to make grid search
-#             calculations lighter
-# Returns an object of class FMM.
-###########################################################################################
-fitFMM_back<-function(vData, nback, timePoints = seqTimes(length(vData)),
-                      maxiter = nback, stopFunction = alwaysFalse,
-                      lengthAlphaGrid = 48, lengthOmegaGrid = 24,
-                      alphaGrid = seq(0, 2*pi, length.out = lengthAlphaGrid),
-                      omegaMin = 0.0001, omegaMax = 1,
-                      omegaGrid = exp(seq(log(omegaMin), log(omegaMax),
-                                          length.out = lengthOmegaGrid+1))[1:lengthOmegaGrid],
-                      numReps = 1, showProgress = TRUE, usedApply = NA,
-                      gridList = precalculateBase(alphaGrid = alphaGrid, omegaGrid = omegaGrid,
-                                                  timePoints = timePoints)){
+
+fitFMM_back_restrBetas<-function(vData, nback, timePoints = seqTimes(length(vData)),
+                            maxiter = nback, stopFunction = alwaysFalse,
+                            lengthAlphaGrid = 48, lengthOmegaGrid = 24,
+                            alphaGrid = seq(0, 2*pi, length.out = lengthAlphaGrid),
+                            omegaMin = 0.0001, omegaMax = 1,
+                            omegaGrid = exp(seq(log(omegaMin), log(omegaMax),
+                                                length.out = lengthOmegaGrid+1))[1:lengthOmegaGrid],
+                            betaMin, betaMax,
+                            numReps = 1, showProgress = TRUE, usedApply = NA,
+                            gridList = precalculateBase(alphaGrid = alphaGrid, omegaGrid = omegaGrid,
+                                                        timePoints = timePoints)){
 
   if(!is.na(usedApply)){
     warning("Argument 'usedApply' is deprecated.")
@@ -58,11 +42,11 @@ fitFMM_back<-function(vData, nback, timePoints = seqTimes(length(vData)),
     for(j in 1:nback){
       # data for component j: difference between vData and all other components fitted values
       backFittingData <- vData - apply(as.matrix(fittedValuesPerComponent[,-j]), 1, sum)
-
       # component j fitting using fitFMM_unit function
-      fittedFMMPerComponent[[j]] <- fitFMM_unit(backFittingData, timePoints = timePoints, lengthAlphaGrid = lengthAlphaGrid,
-                                                lengthOmegaGrid = lengthOmegaGrid, alphaGrid = alphaGrid, omegaMin = omegaMin,
-                                                omegaMax = omegaMax, omegaGrid = omegaGrid, gridList = gridList)
+      fittedFMMPerComponent[[j]] <- fitFMM_unit_restrBetas(backFittingData, timePoints = timePoints, lengthAlphaGrid = lengthAlphaGrid,
+                                                      lengthOmegaGrid = lengthOmegaGrid, alphaGrid = alphaGrid, omegaMin = omegaMin,
+                                                      betaMin = betaMin, betaMax = betaMax,
+                                                      omegaMax = omegaMax, omegaGrid = omegaGrid, gridList = gridList)
       fittedValuesPerComponent[,j] <- getFittedValues(fittedFMMPerComponent[[j]])
       # showProgress
       if(showProgress){
@@ -135,7 +119,7 @@ fitFMM_back<-function(vData, nback, timePoints = seqTimes(length(vData)),
   }
   A <- A[waveOrder]
   alpha <- alpha[waveOrder]
-  beta <- beta[waveOrder]
+  beta <- beta[waveOrder]%%(2*pi)
   omega <- omega[waveOrder]
 
   # Returns an object of class FMM.

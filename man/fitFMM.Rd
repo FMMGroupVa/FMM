@@ -14,8 +14,8 @@ fitFMM(
   stopFunction = alwaysFalse,
   lengthAlphaGrid = 48,
   lengthOmegaGrid = 24,
-  numReps = 3,
-  showProgress = TRUE,
+  numReps = 1,
+  showProgress = FALSE,
   showTime = FALSE,
   parallelize = FALSE,
   restrExactSolution = FALSE
@@ -44,15 +44,15 @@ By default, it is set to 48 possible values of alpha, equally spaced between 0 a
 \item{lengthOmegaGrid}{Precision of the grid of omega in the search of the best model. If it is increased, more possible values of omega will be considered, resulting in an increasing in the computation time too.
 By default it is set to 24 possible values of omega, equally spaced between 0 and 1 in a logarithmic way.}
 
-\item{numReps}{Number of times (alpha, omega) parameters are refined.}
+\item{numReps}{Number of times (alpha, omega) parameters are refined. For non restricted models, it is deprecated.}
 
 \item{showProgress}{\code{TRUE} to display a progress indicator on the console.}
 
 \item{showTime}{\code{TRUE} to display execution time on the console.}
 
-\item{parallelize}{\code{TRUE} to use parallelized procedure to fit FMM model. Its default value is \code{FALSE}. When it is \code{TRUE}, the number of cores to be used is equal to 12, or if the machine has less, the number of cores - 1.}
+\item{parallelize}{\code{TRUE} to use parallelized procedure to fit restricted FMM model. Its default value is \code{FALSE}. When it is \code{TRUE}, the number of cores to be used is equal to 12, or if the machine has less, the number of cores - 1.}
 
-\item{restrExactSolution}{\code{FALSE} to use an aproximated algorithm to fit the FMM model with restrictions (default). If \code{TRUE} is specified, the exact solution is computed.}
+\item{restrExactSolution}{\code{FALSE} to use an aproximated algorithm to fit the model (default). If \code{TRUE} is specified, an nearly exact solution is computed.}
 }
 \value{
 An S4 object of class \code{'FMM'} with information about the fitted model. The object contains the following slots:
@@ -97,17 +97,6 @@ FMM_data <- generateFMM(2, 3, 1.5, 2.3, 0.1,
 fit <- fitFMM(FMM_data$y, lengthAlphaGrid = 10, lengthOmegaGrid = 10)
 summary(fit)
 
-# To see the differences between number of repetitions.
-FMM_data <- generateFMM(2, 1, 1.5, 1.1 ,0.14 , outvalues = TRUE, sigmaNoise = 0.15, plot=TRUE)
-fit1 <- fitFMM(FMM_data$y, lengthAlphaGrid = 6, lengthOmegaGrid = 3, numReps = 1)
-fit2 <- fitFMM(FMM_data$y, lengthAlphaGrid = 6, lengthOmegaGrid = 3, numReps = 6,
-               showProgress = FALSE)  # suppress progress messages
-getSSE(fit1)
-getSSE(fit2)
-
-# Finer resolution grid.
-fit3 <- fitFMM(FMM_data$y, lengthAlphaGrid = 10, lengthOmegaGrid = 5, numReps = 1)
-getSSE(fit3)
 
 # Two component FMM model with beta and omega restricted
 restFMM2w_data <- generateFMM(M = 3, A = c(7, 4), alpha = c(0.5, 5), beta = c(rep(3, 2)),

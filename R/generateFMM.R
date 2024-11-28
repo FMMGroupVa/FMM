@@ -55,7 +55,7 @@
 generateFMM <- function(M, A, alpha, beta, omega, from = 0, to = 2*pi, length.out = 200,
                         plot=TRUE, outvalues = TRUE, sigmaNoise = 0){
 
-  timePoints = seq(from = from, to = to, length.out = length.out)
+  timePoints = seqTimes(length.out)
   nArgs <- max(length(M), length(A), length(alpha), length(beta), length(omega))
   minLength <- min(length(A), length(alpha), length(beta), length(omega))
 
