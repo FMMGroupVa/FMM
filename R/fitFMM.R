@@ -22,6 +22,14 @@
 #'
 #' @param stopFunction Function to check the convergence criterion for the backfitting algorithm (see Details).
 #'
+#' @param betaMin Lower bound for beta parameter \eqn{\beta_{min}\in[0,2\pi]}. All the \eqn{\hat\beta\in\[\beta_{min},\beta_{max}\]}. By default is NULL.
+#'
+#' @param betaMax Upper bound for beta parameter \eqn{\beta_{max}\in[0,2\pi]}. All the \eqn{\hat\beta\in\[\beta_{min},\beta_{max}\]}. By default is NULL.
+#'
+#' @param omegaMin Lower bound for omega parameter and \eqn{0<omega_{Min}<omega_{Max}<1}.
+#'
+#' @param omegaMin Upper bound for omega parameter and \eqn{0<omega_{Min}<omega_{Max}<1}.
+#'
 #' @param lengthAlphaGrid Precision of the grid of alpha in the search of the best model. If it is increased, more possible values of alpha will be considered, resulting in an increasing in the computation time too.
 #'   By default, it is set to 48 possible values of alpha, equally spaced between 0 and \eqn{2\pi}.
 #'
@@ -97,19 +105,21 @@
 fitFMM <- function(vData, nPeriods = 1, timePoints = NULL,
                    nback = 1, betaOmegaRestrictions = 1:nback,
                    maxiter = nback, stopFunction = alwaysFalse,
+                   betaMin = NULL, betaMax = NULL,
+                   omegaMin = 0.001, omegaMax = 1,
                    lengthAlphaGrid = 48, lengthOmegaGrid = 24,
                    numReps = 1, showProgress = FALSE, showTime = FALSE,
                    parallelize = FALSE, restrExactSolution = FALSE){
 
   alphaGrid <- seqTimes(lengthAlphaGrid)
-  omegaMin <- 0.001
-  omegaMax <- 1
   omegaGrid <- exp(seq(log(omegaMin), log(omegaMax),
                        length.out = lengthOmegaGrid+1))[1:lengthOmegaGrid]
 
   betaOmegaRestrictions <- sort(betaOmegaRestrictions)
 
   if(showTime) time.ini <- Sys.time()
+
+  freeBetas <- ifelse(!is.null(betaMin) && !is.null(betaMax), FALSE, TRUE)
 
   # minimum number of observations for fitting
   if(length(vData) < 5){
@@ -163,11 +173,22 @@ fitFMM <- function(vData, nPeriods = 1, timePoints = NULL,
   } else {
     ### fitFMM_back:
     if(length(unique(betaOmegaRestrictions)) == nback){
-      fittedFMM <- fitFMM_back(vData = summarizedData, nback = nback, timePoints = timePoints,
-                               maxiter = maxiter, stopFunction = stopFunction,
-                               lengthAlphaGrid = lengthAlphaGrid, lengthOmegaGrid = lengthOmegaGrid,
-                               alphaGrid = alphaGrid, omegaMin = omegaMin, omegaMax = omegaMax,
-                               omegaGrid = omegaGrid, showProgress = showProgress, gridList = gridList)
+
+      if(freeBetas){
+        fittedFMM <- fitFMM_back(vData = summarizedData, nback = nback, timePoints = timePoints,
+                                 maxiter = maxiter, stopFunction = stopFunction,
+                                 lengthAlphaGrid = lengthAlphaGrid, lengthOmegaGrid = lengthOmegaGrid,
+                                 alphaGrid = alphaGrid, omegaMin = omegaMin, omegaMax = omegaMax,
+                                 omegaGrid = omegaGrid, showProgress = showProgress, gridList = gridList)
+      }else{
+        fittedFMM <- fitFMM_back_restrBetas(vData = summarizedData, nback = nback, timePoints = timePoints,
+                                 maxiter = maxiter, stopFunction = stopFunction,
+                                 lengthAlphaGrid = lengthAlphaGrid, lengthOmegaGrid = lengthOmegaGrid,
+                                 alphaGrid = alphaGrid, omegaMin = omegaMin, omegaMax = omegaMax,
+                                 betaMin = betaMin, betaMax = betaMax,
+                                 omegaGrid = omegaGrid, showProgress = showProgress, gridList = gridList)
+      }
+
       ### fitFMM_restr:
     } else {
       #### Exact solution

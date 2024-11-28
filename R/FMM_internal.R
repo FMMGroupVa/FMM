@@ -42,6 +42,59 @@ step1FMM <- function(optBase, vData) {
            optBase[["omega"]], residualSS))
 }
 
+
+step1FMMRestrBetas <- function(optBase, vData, betaMin, betaMax) {
+
+  OLS <- optBase[["base"]] %*% vData
+
+  sigmaMat <- optBase[["covm"]]
+  betaOLS <- atan2(-OLS[3], OLS[2])%%(2*pi)
+
+  betaOLS2 <- (betaOLS-betaMin)%%(2*pi)
+
+  betaRegionAmplitude <- (betaMax-betaMin)%%(2*pi)
+  if(betaRegionAmplitude<pi){
+    if(betaOLS2 < (betaMax-betaMin)){
+      # Region whose points are valid solutions
+      RLS <- OLS
+      # Region whose points must project onto the cone boundary {R1}U{R2}U{0rigin}
+    }else if(betaOLS2 > (3*pi/2)){
+      # Region whose points project onto R1
+      R <- matrix(c(0, tan(betaMin), 1), ncol = 3)
+      RLS <- OLS - sigmaMat%*%t(R)%*%solve(R%*%sigmaMat%*%t(R))%*%(R%*%OLS)
+    }else if(betaOLS2 < (betaMax-betaMin+pi/2)){
+      # Region whose points project onto R2
+      R <- matrix(c(0, tan(betaMax), 1), ncol = 3)
+      RLS <- OLS - sigmaMat%*%t(R)%*%solve(R%*%sigmaMat%*%t(R))%*%(R%*%OLS)
+    }else{
+      # Region whose points project onto the origin
+      RLS <- c(mean(vData), 0, 0)
+    }
+  }else{
+    R1 <- matrix(c(0, tan(betaMin), 1), ncol = 3)
+    RLS1 <- OLS - sigmaMat%*%t(R1)%*%solve(R1%*%sigmaMat%*%t(R1))%*%(R1%*%OLS)
+    RSS1 <- sum((vData-(RLS1[1] + RLS1[2]*optBase[["cost"]]+RLS1[3]*optBase[["sint"]]))^2)
+
+    R2 <- matrix(c(0, tan(betaMax), 1), ncol = 3)
+    RLS2 <- OLS - sigmaMat%*%t(R2)%*%solve(R2%*%sigmaMat%*%t(R2))%*%(R2%*%OLS)
+    RSS2 <- sum((vData-(RLS2[1] + RLS2[2]*optBase[["cost"]]+RLS2[3]*optBase[["sint"]]))^2)
+
+    if(RSS1<RSS2){
+      RLS <- RLS1
+    }else{
+      RLS <- RLS2
+    }
+  }
+  mobiusRegression <- RLS[1] + RLS[2]*optBase[["cost"]] + RLS[3]*optBase[["sint"]]
+  residualSS <- sum((vData - mobiusRegression)^2)/length(optBase[["sint"]])
+  aParameter <- sqrt(RLS[2]^2 + RLS[3]^2)
+  betaParameter <- atan2(-RLS[3], RLS[2])%%(2*pi)
+
+  return(c(RLS[1], aParameter, optBase[["alpha"]], betaParameter,
+           optBase[["omega"]], residualSS))
+}
+
+
 ################################################################################
 # Internal function: to estimate M, A and beta initial parameters
 # also returns residual sum of squared (RSS).
@@ -183,6 +236,79 @@ step2FMM <- function(parameters, vData, timePoints, omegaMax){
     return(Inf)
 }
 
+
+step2FMMRestrBetas <- function(parameters, vData, timePoints, omegaMax, betaMin, betaMax){
+
+  nObs <- length(timePoints)
+  if(parameters[2] < 0.0001 || parameters[2] > omegaMax){
+    return(Inf)
+  }
+
+  nonlinearMob = 2*atan(parameters[2]*tan((timePoints-parameters[1])/2))
+  DM <- cbind(rep(1, nObs), cos(nonlinearMob), sin(nonlinearMob))
+  OLS <- .lm.fit(DM, vData)$coefficients
+
+  sigmaMat <- solve(t(DM)%*%DM)
+  betaOLS <- atan2(-OLS[3], OLS[2])%%(2*pi)
+  betaOLS2 <- (betaOLS-betaMin)%%(2*pi)
+
+  if(betaOLS2<(betaMax-betaMin)){
+    # Region whose points are valid solutions
+    RLS <- OLS
+
+    # Region whose points must project onto the cone boundary {R1}U{R2}U{0rigin}
+  }else if(betaOLS2 > (3*pi/2)){
+    # Region whose points project onto R1
+    R <- matrix(c(0, tan(betaMin), 1), ncol = 3)
+    RLS <- OLS - sigmaMat%*%t(R)%*%solve(R%*%sigmaMat%*%t(R))%*%(R%*%OLS)
+
+  }else if(betaOLS2 < (betaMax-betaMin+pi/2)){
+    # Region whose points project onto R2
+    R <- matrix(c(0, tan(betaMax), 1), ncol = 3)
+    RLS <- OLS - sigmaMat%*%t(R)%*%solve(R%*%sigmaMat%*%t(R))%*%(R%*%OLS)
+
+  }else{
+    # Region whose points project onto the origin
+    RLS <- c(mean(vData), 0, 0)
+  }
+
+  # FMM model and residual sum of squares
+  modelFMM <- RLS[1] + RLS[2]*cos(nonlinearMob) + RLS[3]*sin(nonlinearMob)
+  residualSS <- sum((modelFMM - vData)^2)/nObs
+
+  return(residualSS)
+
+  # sigma <- sqrt(residualSS/(nObs - 5))
+  # aParameter <- sqrt(RLS[2]^2 + RLS[3]^2)
+  #
+  # # When amplitude condition is valid, it returns RSS
+  # # else it returns infinite.
+  # amplitudeUpperBound <- RLS[1] + aParameter
+  # amplitudeLowerBound <- RLS[1] - aParameter
+  #
+  # rest1 <- amplitudeUpperBound <= max(vData) + 1.96*sigma
+  # rest2 <- amplitudeLowerBound >= min(vData) - 1.96*sigma
+
+  # Other integrity conditions that must be met
+  #rest3 <- aParameter > 0  # A > 0 # This is always true in profileLike
+
+  #plot(timePoints, vData)
+  #lines(timePoints, modelFMM)
+
+  #rest4 <- parameters[2] > 0.0001  &  parameters[2] < omegaMax # omega in (0, omegaMax)
+
+  # if(rest1 & rest2 & rest4)
+  #   return(residualSS)
+  # else
+  #   return(Inf)
+
+  # if(rest4)
+  #   return(residualSS)
+  # else
+  #   return(Inf)
+}
+
+
 ################################################################################
 # Internal function: to calculate the percentage of variability explained by
 #   the FMM model
@@ -245,6 +371,7 @@ calculateCosPhi <- function(alpha, beta, omega, timePoints){
 #   alphagrid, omegaGrid: search grid.
 #   timePoints: time points in which the FMM model is computed.
 # Returns a list where each element is a list with elements:
+#   covm: inv(M'M),
 #   base: inv(M'M)M',
 #   alpha, omega,
 #   cost: cos(tStar), sint: sin(tStar)
@@ -258,6 +385,7 @@ precalculateBase <- function(alphaGrid, omegaGrid, timePoints){
     nonlinearMob = 2*atan(x[2]*tan((timePoints-x[1])/2))
     M <- cbind(timePoints*0+1, cos(nonlinearMob), sin(nonlinearMob))
     return(list(base = solve(t(M)%*%M)%*%t(M),
+                covm = solve(t(M)%*%M),
                 alpha = x[1], omega = x[2],
                 cost = cos(nonlinearMob), sint = sin(nonlinearMob)))
   }, simplify = FALSE)

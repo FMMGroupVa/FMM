@@ -8,7 +8,7 @@
 #' @param components A logical value indicating if the centered wave components of the model should be separately
 #' plotted (case where it is \code{TRUE}). If \code{FALSE}, the default, the fitted FMM model
 #' along with the observed data is plotted.
-#' @param predictionPoints number of time points to predict the signal. It must be greater than the signal length.
+#' @param predictionPoints number of time points to predict the signal. If it is lower than the number of observations, it is set to the number of observations.
 #' @param plotAlongPeriods A logical value indicating if more than one period should be plotted in the plots
 #' by default. Its default value is \code{FALSE}.
 #' @param use_ggplot2 A logical value. If \code{FALSE}, the default, R base graphics are used. If \code{TRUE},
