@@ -8,7 +8,6 @@
 #' @param components A logical value indicating if the centered wave components of the model should be separately
 #' plotted (case where it is \code{TRUE}). If \code{FALSE}, the default, the fitted FMM model
 #' along with the observed data is plotted.
-#' @param predictionPoints number of time points to predict the signal. If it is lower than the number of observations, it is set to the number of observations.
 #' @param plotAlongPeriods A logical value indicating if more than one period should be plotted in the plots
 #' by default. Its default value is \code{FALSE}.
 #' @param use_ggplot2 A logical value. If \code{FALSE}, the default, R base graphics are used. If \code{TRUE},
@@ -57,8 +56,9 @@
 #'                    lengthAlphaGrid = 20,lengthOmegaGrid = 10)
 #' plotFMM(fittedFMM2, plotAlongPeriods = TRUE)
 
-plotFMM <- function(objFMM, components = FALSE, predictionPoints = 500, plotAlongPeriods = FALSE,
-                    use_ggplot2 = FALSE, legendInComponentsPlot = TRUE, textExtra = ""){
+plotFMM <- function(objFMM, components = FALSE, plotAlongPeriods = FALSE,
+                    use_ggplot2 = FALSE, legendInComponentsPlot = TRUE,
+                    textExtra = ""){
 
   nPeriods <- getNPeriods(objFMM)
   if(nPeriods > 1){
@@ -67,25 +67,32 @@ plotFMM <- function(objFMM, components = FALSE, predictionPoints = 500, plotAlon
     }else{
       vData <- getSummarizedData(objFMM)
     }
-  }else{vData <- getData(objFMM)}
+  }else{
+    vData <- getData(objFMM)
+    }
   nObs <- length(vData)
-  predictionPoints <- max(nObs, predictionPoints)
+  predictionPoints <- max(nObs, 500)
 
   if(plotAlongPeriods & !components){
     timePoints <- getTimePoints(objFMM)
     timePoints <- rep(timePoints, nPeriods)
+    # Significant time points to print x-axis marks
+    significantTimePoints <- c(1, round(c(nObs*0.25, nObs*0.5, nObs*0.75, nObs)/nPeriods))
   }else{
     timePoints <- getTimePoints(objFMM)
+    # Significant time points to print x-axis marks
+    significantTimePoints <- c(1,round(c(nObs*0.25, nObs*0.5, nObs*0.75, nObs)))
   }
 
-  significantTimePoints <- round(c(1, nObs*0.25, nObs*0.5, nObs*0.75, nObs))
-  tp <- seqTimes(predictionPoints)
+  # The plot will include additional time points to predict the signal.
+  denseTimePoints <- unique(seqTimes(predictionPoints), timePoints)
+
   predictedSignal <- generateFMM(M = objFMM@M, A = objFMM@A, alpha = objFMM@alpha,
                                  beta = objFMM@beta, omega = objFMM@omega, length.out = predictionPoints,
                                  plot = FALSE)$y
   # Components plot: if there is more than one period, just the data from the first period will be plotted
   if(components){
-    title <- ifelse(textExtra != "", paste("Components FMM", textExtra, sep = " - "),"Components FMM")
+    title <- ifelse(textExtra != "", paste("Components FMM", textExtra, sep = " - "), "Components FMM")
     nComponents <- length(getAlpha(objFMM))
     # With more than 9 components, the selection of colors must be expanded
     if(nComponents > 9){
@@ -111,7 +118,7 @@ plotFMM <- function(objFMM, components = FALSE, predictionPoints = 500, plotAlon
       plot(timePoints, vData, ylim = yLimits, xlab = "Time", ylab = "Response",
            main = title, type = "n", xaxt = "n")
       for(i in 1:nComponents){
-        points(tp, predicted[[i]], type = "l", lwd = 2, col = colorsForComponents[i])
+        points(denseTimePoints, predicted[[i]], type = "l", lwd = 2, col = colorsForComponents[i])
       }
       axis(1, las = 1, at = timePoints[significantTimePoints],
            labels = parse(text=paste("t[",significantTimePoints, "]", sep = "")))
@@ -120,7 +127,7 @@ plotFMM <- function(objFMM, components = FALSE, predictionPoints = 500, plotAlon
       requireNamespace("ggplot2", quietly = TRUE)
       requireNamespace("RColorBrewer", quietly = TRUE)
 
-      df <- data.frame("Time" = rep(tp, nComponents),
+      df <- data.frame("Time" = rep(denseTimePoints, nComponents),
                        "Response" = unlist(predicted),
                        "Components" = rep(componentNames, each = predictionPoints))
 
@@ -144,28 +151,21 @@ plotFMM <- function(objFMM, components = FALSE, predictionPoints = 500, plotAlon
       yLimits<-c(min(vData,predictedSignal), max(vData,predictedSignal))
       plot(timePoints, vData, xlab = "Time", ylab = "Response", main = title, xaxt = "n",
            ylim = yLimits)
-      if(plotAlongPeriods){
-        points(tp, rep(predictedSignal, nPeriods), type = "l", col = 2, lwd = 2)
-      }else{
-        points(tp, predictedSignal, type = "l", col = 2, lwd = 2)
-      }
+      points(denseTimePoints, predictedSignal, type = "l", col = 2, lwd = 2)
       axis(1, las = 1, at = timePoints[significantTimePoints],
            labels = parse(text=paste("t[",significantTimePoints, "]", sep = "")))
     } else {
       requireNamespace("ggplot2", quietly = TRUE)
+      adjustedModel<-predictedSignal
+      original <- data.frame("Time" = timePoints, "Response" = vData)
+      fittedData <- data.frame("Time" = seqTimes(predictionPoints), "Response" = adjustedModel)
+      plot <- ggplot2::ggplot() +
 
-      if(plotAlongPeriods){
-        adjustedModel<-rep(getFittedValues(objFMM),nPeriods)
-      }else{
-        adjustedModel<-getFittedValues(objFMM)
-      }
+        ggplot2::geom_point(data = original, ggplot2::aes_(x=~Time, y=~Response, color = 1),
+                            size = 2, color = "grey65", shape = 21, stroke = 1.1) +
+        ggplot2::geom_path(data = fittedData, ggplot2::aes_(x=~Time, y=~Response, color = "FMM", position = NULL),
+                           size=1.5, lineend = "round", linejoin = "round") +
 
-      fittedData <- data.frame("Time" = timePoints, "fitted_FMM" = adjustedModel, "Response" = vData)
-
-      plot <- ggplot2::ggplot(data = fittedData, ggplot2::aes_(x=~Time, y=~Response, color = 1)) +
-        ggplot2::geom_point(size = 2, color = "grey65", shape = 21, stroke = 1.1) +
-        ggplot2::geom_path(ggplot2::aes_(x=~tp, y=~predictedSignal, color = "FMM", position = NULL),
-                           size=2, lineend = "round", linejoin = "round")+
         ggplot2::labs(title = title) +
         ggplot2::scale_color_manual(values = "red") +
         ggplot2::theme_bw() +

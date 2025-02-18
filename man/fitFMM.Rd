@@ -9,11 +9,14 @@ fitFMM(
   nPeriods = 1,
   timePoints = NULL,
   nback = 1,
-  betaOmegaRestrictions = 1:nback,
   maxiter = nback,
+  betaOmegaRestrictions = 1:nback,
   stopFunction = alwaysFalse,
+  omegaMin = 1e-04,
+  omegaMax = 0.9999,
   lengthAlphaGrid = 48,
   lengthOmegaGrid = 24,
+  omegaGrid = NULL,
   numReps = 1,
   showProgress = FALSE,
   showTime = FALSE,
@@ -31,20 +34,26 @@ in which case they are equally spaced in range \eqn{[0, 2\pi]}. It must be betwe
 
 \item{nback}{Number of FMM components to be fitted. Its default value is 1.}
 
+\item{maxiter}{Maximum number of iterations for the backfitting algorithm. By default, it is set at \code{nback}.}
+
 \item{betaOmegaRestrictions}{An integer vector of length \code{nback} indicating which FMM waves are constrained to have equal \code{beta} and \code{omega} parameters. For example, \code{c(1,1,1,2,2)} indicates that \code{beta1=beta2=beta3} and
 \code{beta4=beta5} as well as \code{omega1=omega2=omega3} and \code{omega4=omega5}. In brief, some waves are restricted to have the same shape. Its default value is the sequence \code{1:nback} to fit the FMM model without restrictions on shape parameters (\code{beta} and \code{omega}).}
 
-\item{maxiter}{Maximum number of iterations for the backfitting algorithm. By default, it is set at \code{nback}.}
-
 \item{stopFunction}{Function to check the convergence criterion for the backfitting algorithm (see Details).}
+
+\item{omegaMin}{Lower bound for omega parameter and \eqn{0<omega_{Min}<omega_{Max}<1}. By default, \code{omegaMin = 0.0001}.}
+
+\item{omegaMax}{Upper bound for omega parameter and \eqn{0<omega_{Min}<omega_{Max}<1}. By default, \code{omegaMin = 0.9999}.}
 
 \item{lengthAlphaGrid}{Precision of the grid of alpha in the search of the best model. If it is increased, more possible values of alpha will be considered, resulting in an increasing in the computation time too.
 By default, it is set to 48 possible values of alpha, equally spaced between 0 and \eqn{2\pi}.}
 
 \item{lengthOmegaGrid}{Precision of the grid of omega in the search of the best model. If it is increased, more possible values of omega will be considered, resulting in an increasing in the computation time too.
-By default it is set to 24 possible values of omega, equally spaced between 0 and 1 in a logarithmic way.}
+By default it is set to 24 possible values of omega.}
 
-\item{numReps}{Number of times (alpha, omega) parameters are refined. For non restricted models, it is deprecated.}
+\item{omegaGrid}{Set of initial omega values in the search of the best model. By default, \code{lengthOmegaGrid} equally spaced values between \code{omegaMin} and \code{omegaMax} in a logarithmic way.}
+
+\item{numReps}{Number of times (alpha, omega) parameters are refined. Deprecated for non restricted models.}
 
 \item{showProgress}{\code{TRUE} to display a progress indicator on the console.}
 
@@ -106,7 +115,6 @@ fit2w.rest <- fitFMM(restFMM2w_data$y, nback = 2, maxiter = 1, numReps = 1,
                      lengthAlphaGrid = 15, lengthOmegaGrid = 10,
                      betaOmegaRestrictions = c(1, 1))
 plotFMM(fit2w.rest, components = TRUE)
-
 }
 \references{
 Rueda C, Larriba Y, Peddada SD (2019). Frequency Modulated Moebius Model Accurately Predicts Rhythmic Signals in Biological and Physical Sciences.

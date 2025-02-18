@@ -9,6 +9,7 @@
 #   omegaMax: max value for omega.
 #   (DEPRECATED) numReps: number of times the alpha-omega grid search is repeated.
 #   (DEPRECATED) usedApply: paralellized version of apply for grid search
+#   reltol:
 #   gridList: list that contains precalculations to make grid search
 #             calculations lighter
 # Returns an object of class FMM.
@@ -16,7 +17,7 @@
 fitFMM_unit <- function(vData, timePoints = seqTimes(length(vData)),
                         lengthAlphaGrid = 48, lengthOmegaGrid = 24,
                         alphaGrid = seq(0, 2*pi, length.out = lengthAlphaGrid),
-                        omegaMin = 0.0001, omegaMax = 1,
+                        omegaMin = 0.0001, omegaMax = 0.999,
                         omegaGrid = exp(seq(log(omegaMin), log(omegaMax),
                                             length.out = lengthOmegaGrid+1))[1:lengthOmegaGrid],
                         numReps = 1, usedApply = NA,
@@ -32,51 +33,39 @@ fitFMM_unit <- function(vData, timePoints = seqTimes(length(vData)),
 
   nObs <- length(vData)
   grid <- expand.grid(alphaGrid, omegaGrid)
-  step1OutputNames <- c("M","A","alpha","beta","omega","RSS")
+  step1OutputNames <- c("alpha","omega","RSS")
 
   ## Step 1: initial values of M, A, alpha, beta and omega. Parameters alpha and
   # omega are initially fixed and cosinor model is used to calculate the rest of the parameters.
   # step1FMM function is used to make this estimate.
   step1 <- matrix(unlist(lapply(FUN = step1FMM, X = gridList, vData = vData)),
-                  ncol = 6, byrow = T)
+                  ncol = 3, byrow = T)
   colnames(step1) <- step1OutputNames
-
-  # We find the optimal initial parameters,
-  # minimizing Residual Sum of Squared with several stability conditions.
-  # We use bestStep1 internal function
-  bestPar <- bestStep1(vData, step1)
+  bestPar <- step1[which.min(step1[,"RSS"]),]
 
   ## Step 2: Nelder-Mead optimization. 'step2FMM' function is used.
-  nelderMead <- optim(par = bestPar[c(3,5)], fn = step2FMM, vData = vData,
-                      timePoints = timePoints, omegaMax = omegaMax)
+  nelderMead <- optim(par = bestPar[c(1,2)], fn = step2FMM,
+                      vData = vData, timePoints = timePoints,
+                      omegaMin = omegaMin, omegaMax = omegaMax)
+
   parFinal <- nelderMead$par
   parFinal[1] <- parFinal[1] %% (2*pi)
-  SSE <- nelderMead$value
 
+  # Linear parameters recalculation
   nonlinearMob = 2*atan(parFinal[2]*tan((timePoints-parFinal[1])/2))
   M <- cbind(rep(1, nObs), cos(nonlinearMob), sin(nonlinearMob))
-  pars <- .lm.fit(M, vData)$coefficients
-
-  aParameter <- sqrt(pars[2]^2 + pars[3]^2)
-  betaParameter <- (atan2(-pars[3], pars[2])+2*pi) %% (2*pi)
-  parFinal <- c(pars[1], aParameter, parFinal[1], betaParameter, parFinal[2])
-
-  # alpha and beta between 0 and 2pi
-  parFinal[3] <- parFinal[3]%%(2*pi)
-
-  names(parFinal) <- step1OutputNames[-6]
+  pars <- stats::.lm.fit(M, vData)$coefficients
 
   # Returns an object of class FMM.
-  fittedFMMvalues <- parFinal["M"] + parFinal["A"]*cos(parFinal["beta"] +
-                                                         2*atan(parFinal["omega"]*tan((timePoints-parFinal["alpha"])/2)))
+  fittedFMMvalues <- pars[1]+ pars[2]*cos(nonlinearMob) + pars[3]*sin(nonlinearMob)
   SSE <- sum((fittedFMMvalues-vData)^2)
 
   return(FMM(
-    M = parFinal[[1]],
-    A = parFinal[[2]],
-    alpha = parFinal[[3]],
-    beta = parFinal[[4]],
-    omega = parFinal[[5]],
+    M = pars[1],
+    A = sqrt(pars[2]^2 + pars[3]^2),
+    alpha = parFinal[1] %% (2*pi),
+    beta = atan2(-pars[3], pars[2]) %% (2*pi),
+    omega = parFinal[2],
     timePoints = timePoints,
     summarizedData = vData,
     fittedValues = fittedFMMvalues,

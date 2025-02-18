@@ -2,17 +2,25 @@
 
 Enhancements:
 
--   Optimized monocomponent and multicomponent model computation: (1) The grid search is performed without redundant calculus, and (2) the post-optimization procedure now only searchs in a 2-dimensional space, converging faster to a better solution. These changes make the parallelization (`parallelize` argument) and the iterative refinement of the grid (`numReps` argument) useless.
--   New internal function `precalculateBase`. This function performs the precalculations needed to optimize grid search calculus.
--   New implementation of function `step2FMM`, used to perform the post-optimization. First argument `parameters` is a vector with values alpha and omega to evaluate the objective function.
+- **Significant computation time reduction**: The grid search is performed without redundant calculus, and the profile likelihood approach is implemented in the post-optimization procedure, which ensures a faster convergence to a local optimum. These changes make the parallelization (`parallelize` argument) and the iterative refinement of the grid (`numReps` argument) useless.
 
+- **`plotFMM` improvements**: Bug fixes and predictions now computed on a denser, evenly spaced grid, in addition to the original time points.
+
+- **Cleaner, more efficient code:** Deprecated numReps and parallelize arguments. Default value of showProgress changed from TRUE to FALSE.
+
+New features:
+
+- **Extended fitFMM arguments:** New parameters: omegaMin, omegaMax, and omegaGrid.
+
+- **New warnings added:** for excessively large amplitude estimates and significantly wide gaps in time points.
 
 Changes:
 
--   `parallelize` and `numReps` arguments are now internally treated as deprecated. A warning is thrown when a call to `fitFMM`, `fitFMM_back` or `fitFMM_unit` contains `parallelize` or `numReps` arguments. 
--   New version of `step1FMM` function to adapt calculus to the `precalculateBase` results. The old version of this function is availible as `step1FMMOld`. `step1FMMOld` is still used in functions to perform restricted models.
--   `omega = 1` is not permitted to avoid singular systems. Then, `omegaGrid` in function `fitFMM`, `fitFMM_back` and `fitFMM_unit` is changed. This restriction is included in post-optimization routines.
--   The link to the GitHub repository (`DESCRIPTION` file) has been changed to repo FMMGroupVa/FMM.
+-  **Repository**: The link to the GitHub repository (`DESCRIPTION` file) has been changed to repo *FMMGroupVa/FMM*.
+
+-  **Vignettes**: The vignette has been updated as a result of the changes.
+
+-  **Internal functions**: Functions `bestStep1`, `getApply` are moved from `FMM_internal` to `FMM_internal_restr`. The old version of `step1FMM` have been renamed as `step1FMMRestr` and also moved `FMM_internal_restr`. New internal functions `checkArguments` and `checkSolution` to validate input parameters and verify the correctness of computed results.
 
 # FMM 0.3.1
 

@@ -26,6 +26,6 @@ Suggests:
     testthat (>= 3.0.0) 
 VignetteBuilder: knitr
 NeedsCompilation: no
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Packaged: 2021-09-12 22:31:59 UTC; Buhardilla
 Config/testthat/edition: 3

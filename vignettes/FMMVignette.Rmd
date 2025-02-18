@@ -50,10 +50,10 @@ Please visit the [FMM Project website](http://www.eio.uva.es/fmm-project/) for c
 install.packages("FMM")
 ```
 
-The R source code is also provided via the GitHub repository at [https://github.com/alexARC26/FMM](https://github.com/alexARC26/FMM). To install this development version enter:
+The R source code is also provided via the GitHub repository at [https://github.com/FMMGroupVa/FMM](https://github.com/FMMGroupVa/FMM). To install this development version enter:
 ```{r eval=FALSE}
 install.packages("devtools")
-devtools::install_github("alexARC26/FMM")
+devtools::install_github("FMMGroupVa/FMM")
 ```
 
 Once `FMM` is installed, it can be loaded by the following command:
@@ -227,11 +227,9 @@ The `lengthAlphaGrid` and `lengthOmegaGrid` arguments are used to set the grid r
 The example code below shows two different configurations of the arguments `lengthAlphaGrid`, `lengthOmegaGrid` and `numReps` to estimated the previously simulated `fmm2.data`. 
 ```{r}
 fit1 <- fitFMM(vData = fmm2.data$y, timePoints = fmm2.data$t, nback = 2, 
-               lengthAlphaGrid = 48, lengthOmegaGrid = 24, numReps = 3,
-               showTime = TRUE)
+               lengthAlphaGrid = 48, lengthOmegaGrid = 24, showTime = TRUE)
 fit2 <- fitFMM(vData = fmm2.data$y, timePoints = fmm2.data$t, nback = 2, 
-               lengthAlphaGrid = 14, lengthOmegaGrid = 7, numReps = 6,
-               showTime = TRUE)
+               lengthAlphaGrid = 14, lengthOmegaGrid = 7, showTime = TRUE)
 getR2(fit1)
 getR2(fit2)
 
@@ -310,7 +308,6 @@ summary(fit.rfmm)
 - **`showProgress`**. When `showProgress = TRUE` a progress indicator and information about the stopping criterion of the backfitting algorithm is displayed on the console.
 
 - **`showTime`**. When `showTime = TRUE` the execution time is displayed on the console.
-
 
 ## Plotting FMM models
 The `FMM` package includes the function `plotFMM()` to visualize an object of class `FMM`. An `FMM` object can be plotted in two ways:
