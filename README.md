@@ -1,5 +1,7 @@
 # FMM base R Package
 
+This repository contains the source codes of the FMM R package which implements the core of the FMM approach.
+
 ## Overview
 
 The FMM (Frequency Modulated Möbius) model is a nonlinear parametric regression model designed to analyze nearly periodic, non-sinusoidal physiological time series, extracting key features encoded in time-varying oscillatory morphology. This method decomposes signals into harmonic functions, known as Möbius waves, which are characterized by four physiologically interpretable parameters: amplitude ($A$), location ($\alpha$), width/sharpness ($\omega$), and direction/symmetry ($\beta$).
