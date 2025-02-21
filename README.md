@@ -8,7 +8,7 @@ The FMM (Frequency Modulated Möbius) model is a nonlinear parametric regression
 
 The FMM approach has demonstrated its effectiveness across various fields, including cardiology, neuroscience, and circadian biology, among many others. Readers may refer to [1-3] for further details.
 
-## FMM R package
+## How to use
 
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/FMM)](https://cran.r-project.org/package=FMM)
 
