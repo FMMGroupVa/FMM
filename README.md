@@ -2,7 +2,7 @@
 
 ## Overview
 
-The FMM (Frequency Modulated Möbius) model is a nonlinear parametric regression approach designed to analyze nearly periodic, non-sinusoidal physiological time series, extracting key features encoded in time-varying oscillatory morphology. This method decomposes signals into harmonic functions, known as Möbius waves, which are characterized by four physiologically interpretable parameters: amplitude ($A$), location ($\alpha$), width/sharpness ($\omega$), and direction/symmetry ($\beta$).
+The FMM (Frequency Modulated Möbius) model is a nonlinear parametric regression model designed to analyze nearly periodic, non-sinusoidal physiological time series, extracting key features encoded in time-varying oscillatory morphology. This method decomposes signals into harmonic functions, known as Möbius waves, which are characterized by four physiologically interpretable parameters: amplitude ($A$), location ($\alpha$), width/sharpness ($\omega$), and direction/symmetry ($\beta$).
 
 The FMM approach has demonstrated its effectiveness across various fields, including cardiology, neuroscience, and circadian biology, among many others. 
 
